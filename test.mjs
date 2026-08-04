@@ -4,7 +4,7 @@
 // identical demand returns the CACHE (build once, run(S)==S), and that never-needed specs cost nothing. Deterministic.
 import E from './estate.mjs';
 import W from './wisp.mjs';
-const { newField, define, collapse, verify, ratio, isBuilt, specId, sha256, exportField, importField, GUARDRAIL, KAPPA } = E;
+const { newField, define, collapse, verify, ratio, isBuilt, specId, sha256, canonical, exportField, importField, GUARDRAIL, KAPPA } = E;
 const { templateWisp, flakyWisp, FIELD_SPECS } = W;
 
 let pass = 0, fail = 0;
@@ -90,6 +90,46 @@ console.log('\n=== §7 · GUARDRAIL + BACKUP + DETERMINISM + FUZZ ===');
   try { collapse(newField(), 'x', () => 'bad'); verify({ name: 'f' }, null); define(newField(), {}); ratio(newField()); importField('garbage{'); collapse(load(), idOf(load(), 'sum'), () => { throw new Error('boom'); }); }
   catch { threw = true; }
   ok(!threw, 'malformed specs / throwing wisps / empty fields never crash the estate');
+}
+
+console.log('\n=== §8 · BOUNDARY PINS — the exact edges the happy path flies past (mutation-gate kills) ===');
+{
+  // ── the κ-gate boundary (line 64): holds ⇔ score >= threshold. Pin a score that EXACTLY equals the
+  //    threshold, so `>=` vs `>` diverge (a build sitting precisely on κ must STAND, not be discarded).
+  const halfSpec = { name: 'half', threshold: 0.5, verify: [{ in: [1], out: 1 }, { in: [1], out: 999 }] };
+  const vh = verify(halfSpec, 'function half(x){ return x; }');   // 1 of 2 checks pass → score exactly 0.5
+  ok(Math.abs(vh.score - 0.5) < 1e-9 && vh.holds === true, 'a collapse whose score EQUALS the threshold HOLDS (κ-gate is >=, not >)');
+
+  // ── canonical (line 38): it must SORT object keys (that is the whole content-address) and stringify
+  //    primitives directly. The two guards decide null/object vs primitive routing.
+  ok(canonical({ b: 2, a: 1 }) === '{"a":1,"b":2}', 'canonical SORTS object keys (a changed guard returns insertion order → wrong address)');
+  ok(canonical(5) === '5', 'canonical stringifies a primitive directly (not as an empty object)');
+
+  // ── clone (line 66, exercised through verify): object inputs are DEEP-COPIED so a tested fn cannot
+  //    mutate the caller's fixture; and undefined inputs must NOT throw inside the clone.
+  const fixture = [1, 2, 3];
+  verify({ name: 'mut', threshold: 0, verify: [{ in: [fixture], out: 6 }] }, 'function mut(a){ const s=a.reduce((x,y)=>x+y,0); a.push(99); return s; }');
+  ok(fixture.length === 3, 'verify DEEP-CLONES an object input — the tested fn cannot mutate the caller\'s fixture');
+  const vu = verify({ name: 'idu', threshold: 0.5, verify: [{ in: [undefined], out: null }] }, 'function idu(x){ return x === undefined ? null : x; }');
+  ok(vu.passed === 1 && vu.holds === true, 'clone tolerates an undefined input (it must not throw) — the check still passes');
+
+  // ── specId (line 41): the content-address must depend on EACH contract field. Two specs differing only
+  //    in `inputs` (or only in `template`) MUST address differently, or the cache collides silently.
+  ok(specId({ name: 'x', inputs: ['a'], verify: [{ in: [1], out: 1 }] }) !== specId({ name: 'x', inputs: ['b'], verify: [{ in: [1], out: 1 }] }), 'specId depends on `inputs` — differing inputs give different addresses');
+  ok(specId({ name: 'x', template: 't1', verify: [{ in: [1], out: 1 }] }) !== specId({ name: 'x', template: 't2', verify: [{ in: [1], out: 1 }] }), 'specId depends on `template` — differing templates give different addresses');
+
+  // ── define (lines 46, 47): the stored spec must preserve the caller's inputs/description, and a spec
+  //    with no name must be REJECTED (the guard is OR: falsy spec OR falsy name).
+  const dI = define(newField(), { name: 'zz', template: 'sum', inputs: ['a'], verify: [{ in: [[1]], out: 1 }] });
+  ok(JSON.stringify(dI.spec.inputs) === '["a"]', 'define STORES the caller\'s inputs verbatim (not blanked to [])');
+  const dD = define(newField(), { name: 'zz2', description: 'hello', template: 'sum', verify: [{ in: [[1]], out: 1 }] });
+  ok(dD.spec.description === 'hello', 'define STORES the caller\'s description verbatim (not blanked to "")');
+  ok(define(newField(), { description: 'no name' }).ok === false, 'define REJECTS a spec with no name (the name guard is real)');
+
+  // ── importField (line 87): reject an object with no specs (null guard is OR); and a non-object `cache`
+  //    must be coerced to {} (the cache guard is AND: truthy AND typeof object).
+  ok(importField('{"foo":1}') === null, 'importField REJECTS a well-formed object that has no specs (returns null)');
+  ok(JSON.stringify(importField('{"specs":{},"cache":"x"}').cache) === '{}', 'importField coerces a non-object cache to {} (guard is truthy AND object)');
 }
 
 const done = fail === 0;

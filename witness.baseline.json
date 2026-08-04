@@ -1,0 +1,7 @@
+[
+  {
+    "mutation": "< → <=",
+    "snippet": "for (let t = 16; t < 64; t++) { const s0 = rotr(w[t - 15], 7) ^ rotr(w[t - 15], 18) ^ (w[t",
+    "reason": "SHA-256 schedule loop bound: extending t to 64 writes w[64] on a fixed-length Uint32Array(64) (out-of-bounds write silently dropped) and w[64] is never read (the compression loop reads only w[0..63]); the hash output is byte-identical, so no test can observe it. Genuinely equivalent."
+  }
+]
