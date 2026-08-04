@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>the generative estate · everything's there till it's built</title>
+<meta name="description" content="A repo of possibilities, not built code. You define possibility (a spec — cheap, near-infinite); the wisp collapses it to actual code on demand; the κ-gate lets it stand only if it verifies; and content-addressing builds each spec once. Lazy evaluation at estate scale — deferring creation, not just execution." />
+<link rel="manifest" href="./manifest.webmanifest" />
+<meta name="theme-color" content="#070a10" />
+<style>
+  :root{
+    --bg:#070a10; --bg2:#0a0f1c; --panel:#101627; --panel2:#161d33; --line:#232b48;
+    --ink:#e8ecf7; --dim:#8f97b8; --faint:#5c6488;
+    --gold:#e8c06a; --gold-soft:rgba(232,192,106,.13); --violet:#8f9dff; --teal:#54d6c4; --rose:#f0879f;
+    --hold:#54d6c4; --clash:#e06a86; --ghost:rgba(143,157,255,.5);
+    --serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+    --sans:-apple-system,system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,'SF Mono','Cascadia Mono',Menlo,Consolas,monospace;
+    --shadow:0 1px 0 rgba(255,255,255,.02),0 30px 80px rgba(0,0,0,.55);
+  }
+  @media(prefers-color-scheme:light){:root{
+    --bg:#f1f3fa; --bg2:#e9edf8; --panel:#fff; --panel2:#f4f6fd; --line:#e0e4f2; --ink:#161a2b; --dim:#565d80; --faint:#8b91b2;
+    --gold:#a97e1c; --gold-soft:rgba(169,126,28,.1); --violet:#5a68e0; --teal:#149a8c; --rose:#c05676; --hold:#149a8c; --clash:#c8506e; --ghost:rgba(90,104,224,.4);
+    --shadow:0 1px 2px rgba(40,40,90,.06),0 20px 60px rgba(40,50,110,.08);
+  }}
+  :root[data-theme="light"]{--bg:#f1f3fa;--bg2:#e9edf8;--panel:#fff;--panel2:#f4f6fd;--line:#e0e4f2;--ink:#161a2b;--dim:#565d80;--faint:#8b91b2;--gold:#a97e1c;--gold-soft:rgba(169,126,28,.1);--violet:#5a68e0;--teal:#149a8c;--rose:#c05676;--hold:#149a8c;--clash:#c8506e;--ghost:rgba(90,104,224,.4);--shadow:0 1px 2px rgba(40,40,90,.06),0 20px 60px rgba(40,50,110,.08)}
+  :root[data-theme="dark"]{--bg:#070a10;--bg2:#0a0f1c;--panel:#101627;--panel2:#161d33;--line:#232b48;--ink:#e8ecf7;--dim:#8f97b8;--faint:#5c6488;--gold:#e8c06a;--gold-soft:rgba(232,192,106,.13);--violet:#8f9dff;--teal:#54d6c4;--rose:#f0879f;--hold:#54d6c4;--clash:#e06a86;--ghost:rgba(143,157,255,.5);--shadow:0 1px 0 rgba(255,255,255,.02),0 30px 80px rgba(0,0,0,.55)}
+
+  *{box-sizing:border-box} html,body{margin:0}
+  body{background:radial-gradient(130% 90% at 50% -10%, var(--bg2), var(--bg));color:var(--ink);font-family:var(--sans);line-height:1.55;-webkit-font-smoothing:antialiased;min-height:100vh;padding:max(18px,env(safe-area-inset-top)) 16px 60px}
+  .wrap{max-width:900px;margin:0 auto}
+  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+  header{text-align:center;margin:12px 0 4px}
+  h1{font-family:var(--serif);font-size:clamp(27px,6vw,42px);font-weight:500;margin:0}
+  h1 .g{color:var(--gold)}
+  .lede{color:var(--dim);font-size:14.5px;max-width:58ch;margin:8px auto 0;font-family:var(--serif);font-style:italic}
+  .tenses{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:11.5px;color:var(--faint);font-family:var(--mono)}
+  .tenses b{color:var(--dim)} .tenses .now{color:var(--gold)}
+  .guard{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:12px;padding:12px 15px;margin:16px 0;font-size:13px;color:var(--dim)}
+  .guard b{color:var(--ink)}
+
+  .meter{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px 17px;margin-top:14px}
+  .meterhead{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px}
+  .meterhead .r{font-family:var(--mono);font-size:13px;color:var(--dim)} .meterhead .r b{color:var(--gold);font-size:18px}
+  .bar{height:10px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);overflow:hidden;margin-top:9px;position:relative}
+  .bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--teal));width:0;transition:width .5s cubic-bezier(.2,.7,.2,1)}
+  .barnote{font-size:11.5px;color:var(--faint);margin-top:6px}
+  .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;justify-content:center}
+  .toggle{font-size:12.5px;color:var(--dim);display:flex;align-items:center;gap:8px;cursor:pointer;border:1px solid var(--line);border-radius:999px;padding:6px 12px;background:var(--panel)}
+  .toggle.on{border-color:var(--clash);color:var(--clash)}
+  button{font-family:var(--sans);cursor:pointer;transition:.15s;border-radius:11px}
+  .btn{font-size:13px;color:var(--dim);background:var(--panel);border:1px solid var(--line);padding:7px 13px}
+  .btn:hover{border-color:var(--violet);color:var(--ink)}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-top:16px}
+  .spec{border:1px dashed var(--ghost);border-radius:14px;padding:14px 15px;background:transparent;transition:.25s;position:relative}
+  .spec.built{border-style:solid;border-color:color-mix(in srgb,var(--hold) 55%,var(--line));background:var(--panel);box-shadow:0 0 0 1px color-mix(in srgb,var(--hold) 18%,transparent)}
+  .spec.discarded{border-color:color-mix(in srgb,var(--clash) 55%,var(--line));animation:shake .4s}
+  @keyframes shake{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+  .spec .st{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+  .spec.built .st{color:var(--hold)}
+  .spec h3{font-family:var(--mono);font-size:16px;margin:3px 0 4px;color:var(--ink);font-weight:600}
+  .spec .desc{font-size:13px;color:var(--dim);font-family:var(--serif);min-height:2.6em}
+  .spec .io{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-top:6px}
+  .spec .act{margin-top:11px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .collapse{font-size:12.5px;font-weight:600;color:#070a10;background:linear-gradient(120deg,var(--violet),var(--teal));border:none;border-radius:999px;padding:7px 14px}
+  .spec.built .collapse{background:transparent;color:var(--teal);border:1px solid var(--line)}
+  .verd{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:6px}
+  .verd.hold{background:color-mix(in srgb,var(--hold) 20%,var(--panel));color:var(--hold)}
+  .verd.clash{background:color-mix(in srgb,var(--clash) 18%,var(--panel));color:var(--clash)}
+  .verd.cache{background:var(--gold-soft);color:var(--gold)}
+  pre{font-family:var(--mono);font-size:11.5px;line-height:1.5;background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:10px 11px;margin:9px 0 0;overflow-x:auto;color:var(--ink);max-height:180px}
+  .msg{font-size:11.5px;color:var(--clash);margin-top:7px;font-family:var(--serif)}
+  .tools{display:flex;gap:9px;justify-content:center;margin-top:22px;flex-wrap:wrap}
+  footer{text-align:center;color:var(--faint);font-size:12px;margin-top:24px;font-family:var(--serif);font-style:italic}
+  a{color:var(--violet)}
+</style>
+</head>
+<body>
+<h2 class="sr-only">The Generative Estate holds build possibilities as specs rather than built code. Each spec is cheap potential; when you demand one, the wisp generates actual code from it, the kappa gate verifies the code against the spec's tests, and it only stands if it passes. A verified build is cached and content-addressed so identical demands never rebuild; a collapse that fails to verify is discarded and the spec stays possibility. A flaky-wisp toggle lets you watch a bad collapse get rejected.</h2>
+<div class="wrap">
+  <header>
+    <h1>the generative <span class="g">estate</span></h1>
+    <div class="lede">Everything's there till it's built. Hold possibility cheap; collapse to actual only on demand — and only if it verifies.</div>
+    <div class="tenses"><span>oracle · <b>future</b></span><span>re-collapse · <b>past</b></span><span class="now">generative · <b>build-space</b></span></div>
+  </header>
+
+  <div class="guard"><b>The load-bearing part.</b> The collapse must be <b>verified or the field renders garbage</b>. The κ-gate isn't optional here — a collapse that fails proof-of-play is <b>discarded</b> and the spec stays possibility. You never get unverified code. (Flip <b>flaky wisp</b> below to watch it reject a bad build.)</div>
+
+  <section class="meter">
+    <div class="meterhead"><div>possibility → actual</div><div class="r"><b id="builtN">0</b> built · <span id="potN">0</span> still potential</div></div>
+    <div class="bar"><i id="ratioFill"></i></div>
+    <div class="barnote" id="barnote">Nothing built yet — the whole field is potential. Collapse only what you need.</div>
+    <div class="controls">
+      <label class="toggle" id="flakyToggle"><span id="flakyState">◇</span> flaky wisp (watch it get rejected)</label>
+      <button class="btn" id="resetBtn">reset the field</button>
+    </div>
+  </section>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="tools">
+    <button class="btn" id="exportBtn">⬇ back up the field</button>
+    <button class="btn" id="importBtn">⬆ restore</button>
+    <input type="file" id="importFile" accept="application/json" style="display:none" />
+  </div>
+
+  <footer>A million possible tools cost almost nothing; only the handful you need collapse to actual. 99% potential, 1% built — the atom's ratio, as a build system. ◊·κ</footer>
+</div>
+
+<script type="module">
+import E from './estate.mjs?v=1';
+import W from './wisp.mjs?v=1';
+const $ = s => document.querySelector(s);
+const KEY = 'generative-estate-v1';
+let field = load(); let flaky = false;
+function fresh(){ const f = E.newField(); for(const s of W.FIELD_SPECS) E.define(f, s); return f; }
+function load(){ try{ const f = E.importField(localStorage.getItem(KEY)); if(f && Object.keys(f.specs).length) return f; }catch(e){} return fresh(); }
+function save(){ try{ localStorage.setItem(KEY, E.exportField(field)); }catch(e){} }
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function render(){
+  const specs = E.possibilities(field), r = E.ratio(field);
+  $('#builtN').textContent = r.built; $('#potN').textContent = r.potential;
+  $('#ratioFill').style.width = (r.actualFraction*100)+'%';
+  $('#barnote').textContent = r.built===0? 'Nothing built yet — the whole field is potential. Collapse only what you need.'
+    : `${(r.actualFraction*100).toFixed(0)}% of the field has collapsed to actual — the rest stays free potential.`;
+  $('#grid').innerHTML = specs.map(s=>{ const c = field.cache[s.id]; const state = c?'built':'potential';
+    return `<div class="spec ${c?'built':''}" data-id="${s.id}" id="sp-${s.id}">
+      <div class="st">${c?'◊ built · stands':'○ possibility · un-collapsed'}</div>
+      <h3>${esc(s.name)}(${(s.inputs||[]).join(', ')})</h3>
+      <div class="desc">${esc(s.description)}</div>
+      <div class="io">verify: ${(s.verify||[]).length} checks${c?` · <span style="color:var(--hold)">${c.verify.detail}</span>`:''}</div>
+      <div class="act"><button class="collapse" data-c="${s.id}">${c?'↻ collapse again':'◊ collapse on demand'}</button>
+        ${c?`<span class="verd hold">verified</span>`:''}</div>
+      ${c?`<pre>${esc(c.artifact)}</pre>`:''}
+      <div class="msg" id="msg-${s.id}" style="display:none"></div>
+    </div>`; }).join('');
+  save();
+}
+$('#grid').addEventListener('click', async e=>{ const b=e.target.closest('[data-c]'); if(!b) return; doCollapse(b.dataset.c); });
+
+function doCollapse(id){
+  const wisp = flaky ? W.flakyWisp : W.templateWisp;
+  const r = E.collapse(field, id, wisp, { ts: Date.now() });
+  const card = $('#sp-'+id), msg = $('#msg-'+id);
+  if(r.ok){
+    render();
+    if(r.cached){ const v=$('#sp-'+id).querySelector('.verd'); if(v){ v.textContent='cached · built once'; v.className='verd cache'; } }
+  } else {
+    card.classList.add('discarded'); setTimeout(()=>card.classList.remove('discarded'), 500);
+    msg.style.display=''; msg.innerHTML = `✕ ${esc(r.why)}`;
+    setTimeout(()=>{ msg.style.display='none'; }, 4500);
+  }
+}
+
+$('#flakyToggle').onclick=()=>{ flaky=!flaky; $('#flakyToggle').classList.toggle('on',flaky); $('#flakyState').textContent=flaky?'◆':'◇'; };
+$('#resetBtn').onclick=()=>{ if(confirm('Reset the field — discard all builds back to possibility?')){ field=fresh(); save(); render(); } };
+$('#exportBtn').onclick=()=>{ const blob=new Blob([E.exportField(field)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='generative-estate.json'; a.click(); };
+$('#importBtn').onclick=()=>$('#importFile').click();
+$('#importFile').onchange=e=>{ const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ const s=E.importField(rd.result); if(s){ field=s; save(); render(); } else alert('That file could not be read.'); }; rd.readAsText(f); };
+
+render();
+if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+</script>
+</body>
+</html>
